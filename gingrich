@@ -128,6 +128,7 @@
   } 
 
 # check that graph geometry will work
+  dev.new() # create new graphics device  
   if (max(dt_node$x_tpa)>plot_x_bound|max(dt_node$y_ba>plot_y_bound) ) {
     ggplot() + 
       xlim(0,10) + ylim(0,10) +
@@ -194,7 +195,6 @@
     }
 
 # output diagram to graphics device
-  dev.new() # create new graphics device  
   print(g)
 
 # export object 'dt_node' as .csv file to working directory if export_dt_node == TRUE  
