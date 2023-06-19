@@ -1,6 +1,6 @@
 ### DEFINE TERMS - ALL MANUAL EDITS IN THIS SECTION -----------------------------------------------
 # Define working directory
-  setwd("...")
+  setwd("C:/Users/albrechtcf/Desktop/wc_OTHER/SFA_era/Fall2021/FORS6176_Silviculture_Stovall")
 
 # Define QMD numbers of radiating lines
   rad_lines <- c(4,6,8,10,12,14,16,20,28)
@@ -127,8 +127,10 @@
     } 
   } 
 
+# create blank graphics device
+  dev.new() 
+  
 # check that graph geometry will work
-  dev.new() # create new graphics device  
   if (max(dt_node$x_tpa)>plot_x_bound|max(dt_node$y_ba>plot_y_bound) ) {
     ggplot() + 
       xlim(0,10) + ylim(0,10) +
