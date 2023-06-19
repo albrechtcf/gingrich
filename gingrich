@@ -1,0 +1,204 @@
+### DEFINE TERMS - ALL MANUAL EDITS IN THIS SECTION -----------------------------------------------
+# Define working directory
+  setwd("C:/Users/albrechtcf/Desktop/wc_OTHER/SFA_era/Fall2021/FORS6176_Silviculture_Stovall")
+
+# Define QMD numbers of radiating lines
+  rad_lines <- c(4,6,8,10,12,14,16,20,28)
+
+# Define maximum SDI and the RD of A,B, and C stocking lines
+  sdi_max <- 400  # species-specific maximum SDI value
+  rd_a    <- 0.50 # relative density (fraction) at A level stocking
+  rd_b    <- 0.35 # RD at B level stocking
+  rd_c    <- 0.20 # RD at C level stocking
+
+# Export table showing xy coordinates of all stocking line X QMD line intersections?
+  export_dt_node <- TRUE # If 'TRUE' data will be exported as .csv file to the working directory
+
+# Set maximum x and y values of diagram axes
+  plot_x_bound <- 1000    
+  plot_y_bound <- 180
+
+# Set plot background gridline intervals
+  x_grid_interval <- 100
+  y_grid_interval <- 20
+
+# Set font sizes
+  title_font_size              <- 14
+  axis_label_font_size         <- 12
+  axis_values_font_size        <- 10 
+  qmd_line_label_font_size     <- 4
+  stocking_lines_info_box_text <- 4
+
+# Set y offset of QMD line labels
+  qmd_label_y_nudge <- 0.02 # number entered is fraction of plot_y_bound
+
+# Set XY position of label showing max SDI and stocking line numbers
+# numbers below are fractions of plot_x_bound and plot_y_bound
+# middle of left side of label will be at position specified below
+  stocking_lines_info_box_x_pos <- 0.60
+  stocking_lines_info_box_y_pos <- 0.1
+
+### DO NOT EDIT BELOW THIS POINT ------------------------------------------------------------------
+# read in / open packages (may need to install prior to loading)
+  library(ggplot2)
+  library(data.table)
+
+# define terms for initial calculated values
+  fc               <- 0.005454            # foresters' constant
+  sdi_a            <- rd_a*sdi_max        # A level stocked as relative density 
+  sdi_b            <- rd_b*sdi_max        # B level stocked as relative density
+  sdi_c            <- rd_c*sdi_max        # C level stocked as relative density
+  qmdVECT          <- as.vector(rad_lines[order(rad_lines)])
+  abc_stockingVect <- c(sdi_a,sdi_b,sdi_c)
+  n_nodes          <- (length(abc_stockingVect)*length(qmdVECT))
+
+# define data table
+  dt <- data.table::data.table(qmd=numeric(length(qmdVECT)),
+                             x1=numeric(length(qmdVECT)),
+                             y1=numeric(length(qmdVECT)),
+                             x2=numeric(length(qmdVECT)),
+                             y2=numeric(length(qmdVECT)),
+                             offchart=logical())
+
+# define data table for writing plot geometry data
+  mapping <- data.table::data.table(qmd=numeric(length(qmdVECT)),
+                                  x_edge=numeric(length(qmdVECT)),
+                                  y_edge=numeric(length(qmdVECT)))
+
+# define data table for inputting node XY coordinates
+  dt_node <- data.table::data.table(x_tpa=numeric(n_nodes),
+                                  y_ba=numeric(n_nodes),
+                                  qmd_line=numeric(n_nodes),
+                                  sdi_line=numeric(n_nodes))
+
+# define data table for node connection segments
+  node_connect <- data.table( xbeg=numeric(length(qmdVECT)-1), ybeg=numeric(length(qmdVECT)-1),
+                            xend=numeric(length(qmdVECT)-1), yend=numeric(length(qmdVECT)-1))
+
+# calculations      
+  for (qmd in qmdVECT) {
+    tpa <- plot_y_bound/((qmd^2)*fc)
+    if (qmd == qmdVECT[1]){
+      r <- 1
+    } else {
+      r <- r+1 }
+    dt[r,1]<-qmd ; dt[r,2]<-tpa ; dt[r,3]<-plot_y_bound
+    if (qmd == qmdVECT[length(qmdVECT)]) { output<-dt ; rm(dt) ; print(output)} 
+  }   
+  output[,6] <- output[,2]>plot_x_bound  
+
+# identify off-chart points given values of 'plot_y_bound' and 'plot_x_bound'
+  for (i in 1:nrow(output)) {
+    if ( output[i,offchart]!=FALSE ) {
+      output[i,4] <- plot_x_bound
+      output[i,5] <- (plot_x_bound/output[i,2])*plot_y_bound
+    } 
+  } 
+
+# define values in mapping data table for use with ggplot
+  for (i in 1:nrow(output)) {
+    mapping[i,1]<-output[i,1]
+    if ( output[i,offchart]!=FALSE ) {
+      mapping[i,2] <- output[i,4]
+      mapping[i,3] <- output[i,5]
+    } else {
+      mapping[i,2] <- output[i,2]
+      mapping[i,3] <- output[i,3]
+    } 
+  } 
+
+# sdi calculations
+  for (y in 1:length(qmdVECT)) {
+    for (i in 1:length(abc_stockingVect)) {
+      tpa_at_line <- abc_stockingVect[i]/((qmdVECT[y]/10)^1.605) 
+      print(paste(" tpa= ",signif(tpa_at_line,4),
+                  "    sdi_line= ",abc_stockingVect[i],
+                  "    qmd_line= ",qmdVECT[y], sep = ""))
+      if (y==1 & i==1 ) {
+        posvartemp <- 1
+      } else {
+        posvartemp <- posvartemp + 1  }
+      dt_node[posvartemp,1] <- tpa_at_line
+      dt_node[posvartemp,2] <- ((qmdVECT[y]^2)*fc*tpa_at_line)
+      dt_node[posvartemp,3] <- qmdVECT[y]
+      dt_node[posvartemp,4] <- abc_stockingVect[i]
+    
+    if (y==length(qmdVECT) & i==length(abc_stockingVect)) {rm(posvartemp)}
+    } 
+  } 
+
+# check that graph geometry will work
+  if (max(dt_node$x_tpa)>plot_x_bound|max(dt_node$y_ba>plot_y_bound) ) {
+    ggplot() + 
+      xlim(0,10) + ylim(0,10) +
+      geom_label(aes(label=paste("Error: stocking lines extend beyond current extent of map\n\nIncrease value of plot_x_bound or plot_y_bound\nabove",
+                                 signif(max(dt_node$x_tpa),4),
+                                 "or",
+                                 signif(max(dt_node$y_ba),4),
+                                 "(respectively)",
+                               sep = " "),
+                   x=5,y=5),
+               fill="yellow",
+               color="black",
+               size=5,
+               fontface="bold")
+  } else {
+# generate ggplot object
+  # Start with base ggplot layer
+    g <- ggplot()
+  
+  # Add grid and background
+    g <- g + theme(panel.grid.major = element_line(colour = "grey", size = 0.5))
+    g <- g + theme(panel.background = element_rect(fill = 'white', colour = 'black'))
+  
+  # Add line segments
+    g <- g + geom_segment(data = mapping, aes(x = 0, y = 0, xend = x_edge, yend = y_edge))
+  
+  # Adjust limits
+    g <- g + xlim(0, plot_x_bound * 1.12) + ylim(0, plot_y_bound * 1.12) # value of 1.12 is arbitrary and solely aesthetic 
+  
+  # Add labels
+    g <- g + xlab("Density (TPA)") + ylab("BA (sqft/ac)")
+    g <- g + theme(axis.title = element_text(size = axis_label_font_size))
+    g <- g + theme(axis.text = element_text(size = axis_values_font_size))
+    g <- g + ggtitle("Gingrich-Style Stocking Guide")
+  
+  # Add QMD labels
+    g <- g + geom_text(data = mapping, aes(label = qmd, x = x_edge, y = y_edge), 
+                     color = "black", size = qmd_line_label_font_size, angle = 0,
+                     nudge_y = plot_y_bound * qmd_label_y_nudge)
+  
+  # Center title
+    g <- g + theme(plot.title = element_text(hjust = 0.5, size = title_font_size))
+  
+  # Add SDI information
+    g <- g + geom_label(data = NULL, aes(x = plot_x_bound * stocking_lines_info_box_x_pos, 
+                                       y = plot_y_bound * stocking_lines_info_box_y_pos),
+                      hjust = 0, size = stocking_lines_info_box_text, 
+                      label = paste("Max SDI=", sdi_max,
+                                    "\nA-level RD=", format(round(rd_a, 4), nsmall = 2), "   A-level SDI=", sdi_a,
+                                    "\nB-level RD=", format(round(rd_b, 4), nsmall = 2), "   B-level SDI=", sdi_b,
+                                    "\nC-level RD=", format(round(rd_c, 4), nsmall = 2), "   C-level SDI=", sdi_c))
+  
+  # Set gridline intervals
+    g <- g + scale_x_continuous(breaks = seq(0, plot_x_bound, by = x_grid_interval), minor_breaks = NULL)
+    g <- g + scale_y_continuous(breaks = seq(0, plot_y_bound, by = y_grid_interval), minor_breaks = NULL)
+  
+  # Add dashed stocking lines
+    for (y in seq_len(n)) {
+      for (i in seq_len(m)) {
+        pick <- dt_node$sdi_line == abc_stockingVect[y]
+        temp <- dt_node[pick]
+        g <- g + geom_segment(data = temp[c(i, i + 1), ], aes(x = x_tpa, y = y_ba, xend = x_tpa[2], yend = y_ba[2]), linetype = "dashed")
+      }
+    }
+
+# output diagram to graphics device
+  dev.new() # create new graphics device  
+  print(g)
+
+# export object 'dt_node' as .csv file to working directory if export_dt_node == TRUE  
+  if (export_dt_node==TRUE) {
+    write.csv(dt_node, "dt_node.csv")
+    }
+  } 
