@@ -1,6 +1,6 @@
 ### DEFINE TERMS - ALL MANUAL EDITS IN THIS SECTION -----------------------------------------------
 # Define working directory
-  setwd("C:/Users/albrechtcf/Desktop/wc_OTHER/SFA_era/Fall2021/FORS6176_Silviculture_Stovall")
+  setwd("...")
 
 # Define QMD numbers of radiating lines
   rad_lines <- c(4,6,8,10,12,14,16,20,28)
