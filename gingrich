@@ -8,7 +8,9 @@
 
 ### SECTION 2: DEFINE STOCKING AND OUTPUT PARAMETERS ----------------------------------------------
 # clear environment
-  rm(list = ls(all = TRUE)) ; graphics.off() ; shell("cls")
+  clear_env <- F # if T console and environment will be wiped
+  if (clear_env == T) {
+    rm(list = ls(all = TRUE)) ; graphics.off() ; shell("cls")}
 
 # Define working directory
   setwd("...")
